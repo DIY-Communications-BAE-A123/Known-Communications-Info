@@ -1,0 +1,1 @@
+unsigned char crcCalcCRC8(unsigned char * msg, unsigned int len);
