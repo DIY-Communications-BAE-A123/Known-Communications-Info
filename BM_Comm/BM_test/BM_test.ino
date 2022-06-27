@@ -2,6 +2,7 @@
  * @brief Tests probing BM to establish initial communication.
  * 
  * @author Hale Konopka (jkonopka)
+ * @edited by Emenike Goodluck
  * 
  * See BM Testing Harness Schematic. Below is overview of testbench specs for which this was written:
  *   - Arduino UNO 
@@ -27,21 +28,28 @@
 #define BMS_COMMAND_LEN 8
 #define BM_RESPONSE_LEN 14
 
+
 /* Packet Definitions */
 #define HEAD                     (0x58)
 #define GLOBAL_ADDR              (0xff)
 
 /* Command Definitions */
-#define CMD_TRIGGER              (50)
-#define CMD_SET_ADDRESS          (60)
-#define CMD_AUTOADDR_DONE        (65)
-#define CMD_GLOBAL_SNAPSHOT      (70)
-#define CMD_SEND_SUMMARY         (80)
-#define CMD_SEND_ALL_VOLTAGES_1  (160)
-#define CMD_SEND_ALL_VOLTAGES_2  (161)
-#define CMD_SEND_ALL_VOLTAGES_3  (162)
-#define CMD_BALANCE_TARGET       (170)
-#define CMD_SUSI                 (251)
+#define CMD_TRIGGER              (0x32)
+#define CMD_SET_ADDRESS          (0x3c)
+#define CMD_AUTOADDR_DONE        (0x41)
+#define CMD_GLOBAL_SNAPSHOT      (0x46)
+#define CMD_SEND_SUMMARY         (0x50)
+#define CMD_SEND_ALL_VOLTAGES_1  (0xa0)
+#define CMD_SEND_ALL_VOLTAGES_2  (0xa1)
+#define CMD_SEND_ALL_VOLTAGES_3  (0xa2)
+#define CMD_BALANCE_TARGET       (0xaa)
+#define CMD_SUSI                 (0xfb)
+
+byte TRIGGER_IN = 13; // Used to set the BM for communication
+byte TRIGGER_OUT = 12; // Used to activate/deactivate the next BM in the chain
+byte buzzer = 7;
+bool assert = 1;
+bool deassert = 0;
 
 /**
  * @brief Test startup sequence with triggering
@@ -49,7 +57,7 @@
 void test5(void)
 {
   /* Command definitions */
-  byte global_set_addr_cmd[BMS_COMMAND_LEN] = {HEAD, 0xFF, CMD_SET_ADDRESS, 0xFE, 0x00, 0x00, 0x02, 0xFF};
+  char global_set_addr_cmd[BMS_COMMAND_LEN] = {HEAD, GLOBAL_ADDR, CMD_SET_ADDRESS, 0xFE, 0x00, 0x00, 0x02, 0xFF};
   global_set_addr_cmd[7] = crcCalcCRC8(global_set_addr_cmd, 7);
   
   byte trigger_cmd[BMS_COMMAND_LEN] = {HEAD, 0xFE, CMD_TRIGGER, 0x00, 0x00, 0x00, 0x00, 0xFF};
@@ -139,7 +147,7 @@ void test9(void)
  */
 void test10(void)
 {
-  byte send_summary[BMS_COMMAND_LEN] = {HEAD, 0xFE, CMD_SEND_SUMMARY, 0x00, 0x00, 0x00, 0x00, 0xFF};
+  byte send_summary[BMS_COMMAND_LEN] = {HEAD, 0xBB, CMD_SEND_SUMMARY, 0x00, 0x00, 0x00, 0x00, 0xFF};
   send_summary[7] = crcCalcCRC8(send_summary, 7);
 
   /* Send summary with correct CRC */
@@ -183,7 +191,10 @@ void test11(void)
    *  - Tie pin 12 to Vdd until you are ready to receive data
    */
   
-  pinMode(12, INPUT); /* TEST PIN TO USE AS GATE, connect to ground */
+ // pinMode(12, INPUT); /* TEST PIN TO USE AS GATE, connect to ground */
+  //pinMode(13,OUTPUT);
+  //digitalWrite(13,HIGH);
+
 
   /* Setup the BM with address 0xAB */
   Serial.write(trigger_cmd, BMS_COMMAND_LEN);
@@ -205,6 +216,105 @@ void test11(void)
   Serial.write(send_summary, BMS_COMMAND_LEN);
   delayMicroseconds(5000);
 }
+  
+void startupSeq(void)
+{
+
+  /* Command definitions */
+  byte trigger_cmd[BMS_COMMAND_LEN] = {HEAD, 0xFE, CMD_TRIGGER, 0x00, 0x00, 0x00, 0x00, 0x00};
+  trigger_cmd[7] = crcCalcCRC8(trigger_cmd, 7);
+  Serial.println("Trigger command to be sent is:");
+  //Serial.println(sizeof(trigger_cmd));
+  int cmdSize = sizeof(trigger_cmd);
+  int i = 0;
+  Serial.print("{");
+  while(i<cmdSize){
+  Serial.print(trigger_cmd [i],HEX);
+  Serial.print(", ");
+    i++;
+  }
+  Serial.println("}");
+  
+
+  byte global_set_addr_cmd[BMS_COMMAND_LEN] = {HEAD, 0xFF, CMD_SET_ADDRESS, 0xBB, 0x00, 0x00, 0x02, 0x00};
+  global_set_addr_cmd[7] = crcCalcCRC8(global_set_addr_cmd, 7);
+
+  Serial.println("global set address command to be sent is:");
+  //Serial.println(sizeof(trigger_cmd));
+  cmdSize = sizeof(global_set_addr_cmd);
+  i = 0;
+  Serial.print("{");
+  while(i<cmdSize){
+  Serial.print(global_set_addr_cmd[i],HEX);
+  Serial.print(", ");
+    i++;
+  }
+  Serial.println("}");
+  
+  
+  byte auto_addr_done_cmd[BMS_COMMAND_LEN] = {HEAD, 0xFF, CMD_AUTOADDR_DONE, 0x00, 0x00, 0x00, 0x00, 0x00};
+  auto_addr_done_cmd[7] = crcCalcCRC8(auto_addr_done_cmd, 7);
+  
+  Serial.println("auto address done command to be sent is:");
+  //Serial.println(sizeof(trigger_cmd));
+  cmdSize = sizeof(auto_addr_done_cmd);
+  i = 0;
+  Serial.print("{");
+  while(i<cmdSize){
+  Serial.print(auto_addr_done_cmd[i],HEX);
+  Serial.print(", ");
+    i++;
+  }
+  Serial.println("}");
+
+  // byte send_summary[BMS_COMMAND_LEN] = {HEAD, 0xBB, CMD_SEND_SUMMARY, 0x00, 0x00, 0x00, 0x00, 0xFF};
+  // send_summary[7] = crcCalcCRC8(send_summary, 7);
+
+  // byte global_snapshot[BMS_COMMAND_LEN] = {HEAD, 0xFF, CMD_GLOBAL_SNAPSHOT, 0x00, 0x00, 0x00, 0x00, 0xFF};
+  // global_snapshot[7] = crcCalcCRC8(global_snapshot, 7);
+  
+  // byte send_all_v1_cmd[BMS_COMMAND_LEN] = {HEAD, 0xBB, CMD_SEND_ALL_VOLTAGES_1, 0x00, 0x00, 0x00, 0x00, 0xFF};
+  // send_all_v1_cmd[7] = crcCalcCRC8(send_all_v1_cmd, 7);
+
+
+  /* 
+   * SETUP: 
+   *  - Ensure EMITTER(TRIGGER_IN)= FLOATING, ANODE(TRIGGER_OUT)= Vdd 
+   *  - Tie pin 12 to Vdd until you are ready to receive data
+   */
+  
+  // Assert trigger in
+  digitalWrite(TRIGGER_IN,assert); // This will deassert the trigger out (+5v)
+  digitalWrite(buzzer,HIGH);
+  delay(5000);
+  digitalWrite(buzzer,LOW);
+  /* Setup the BM with address 0xAB */
+  delay(500);
+  digitalWrite(buzzer,HIGH);
+  Serial.write(trigger_cmd, BMS_COMMAND_LEN);
+  delay(100);
+  digitalWrite(buzzer,LOW);
+  Serial.write(global_set_addr_cmd, BMS_COMMAND_LEN);
+  delay(100);
+  digitalWrite(buzzer,HIGH);
+  Serial.write(auto_addr_done_cmd, BMS_COMMAND_LEN);
+  delay(100);
+  digitalWrite(buzzer,LOW);
+
+  //while (digitalRead(12) == LOW) {continue;} /* Tie pin 12 high when you are ready to move on to next section */
+
+  // /* SNAPSHOT */
+  // Serial.write(global_snapshot, BMS_COMMAND_LEN);
+  // delayMicroseconds(5000);
+
+  // /* Get data back */
+  // Serial.write(send_summary, BMS_COMMAND_LEN);
+  // delayMicroseconds(5000);
+  // Serial.write(send_all_v1_cmd, BMS_COMMAND_LEN);
+  // delayMicroseconds(5000);
+
+}
+
 
 void setup() 
 {
@@ -213,13 +323,51 @@ void setup()
    *    of 115200. In the next release, the serial baud rate will be 230400.
    *    8 data bits, 1 stop bit, no parity are used"
    */
+  pinMode(TRIGGER_IN, OUTPUT); // Input to the BM
+  pinMode (TRIGGER_OUT, INPUT); // Output of the BM
+  pinMode (buzzer, OUTPUT);
   Serial.begin(230400, SERIAL_8N1);
   delay(1000); // Give the UART a bit of time in case it needs it
 
   /* Execute a test*/
-  test10(); 
+  //test10(); 
+
+  //Sound buzzer to indicate the start of communication
+  digitalWrite(buzzer, HIGH);
+  delay(500);
+  digitalWrite(buzzer,LOW);
+  delay(500);
+  digitalWrite(buzzer, HIGH);
+  delay(500);
+  digitalWrite(buzzer,LOW);
+  delay(500);
+
+  digitalWrite(TRIGGER_IN, deassert);
+
+  // run the startup sequence
+  startupSeq();
+  //test10();
+  //sound buzzer to know when it is done
+  delay(3000);
+  digitalWrite(buzzer, HIGH);
+  delay(1000);
+  digitalWrite(buzzer,LOW);
+  delay(1000);
+  digitalWrite(buzzer, HIGH);
+  delay(1000);
+  digitalWrite(buzzer,LOW);
+  delay(1000);
+  digitalWrite(buzzer, HIGH);
+  delay(1000);
+  digitalWrite(buzzer,LOW);
+  delay(1000);
+  
 }
 
 void loop() 
 {
+  // test10();
+  // delay(3000);
+  //Serial.println("Hello People");
+  //delay(2000);
 }
