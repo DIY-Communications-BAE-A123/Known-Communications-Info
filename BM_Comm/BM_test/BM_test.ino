@@ -46,14 +46,25 @@
 #define CMD_SUSI                 (0xfb)
 
 byte TRIGGER_IN = 13; // Used to set the BM for communication
-byte TRIGGER_OUT = 12; // Used to activate/deactivate the next BM in the chain
+byte TRIGGER_OUT = 12; // Used to activate/deactivate the next BM in the chain 
 byte buzzer = 7;
-bool assert = 1;
-bool deassert = 0;
+bool assert = 0;
+bool deassert = 1;
 
 /**
  * @brief Test startup sequence with triggering
  */
+
+ void assertTrigger()
+ {
+   digitalWrite(TRIGGER_IN,assert);
+ }
+
+  void deassertTrigger()
+ {
+   digitalWrite(TRIGGER_IN,deassert);
+ }
+
 void test5(void)
 {
   /* Command definitions */
@@ -147,17 +158,18 @@ void test9(void)
  */
 void test10(void)
 {
-  byte send_summary[BMS_COMMAND_LEN] = {HEAD, 0xBB, CMD_SEND_SUMMARY, 0x00, 0x00, 0x00, 0x00, 0xFF};
+  byte send_summary[BMS_COMMAND_LEN] = {HEAD, 0xbb, CMD_BALANCE_TARGET, 0x00, 0x00, 0x10, 0x00, 0xFF};
   send_summary[7] = crcCalcCRC8(send_summary, 7);
 
+  assertTrigger();
   /* Send summary with correct CRC */
   Serial.write(send_summary, BMS_COMMAND_LEN);
   delayMicroseconds(5000);
 
-  /* Send summary with incorrect CRC */
-  send_summary[7] = send_summary[7] + 1 % 0xFF;
-  Serial.write(send_summary, BMS_COMMAND_LEN);
-  delayMicroseconds(5000);
+  // /* Send summary with incorrect CRC */
+  // send_summary[7] = send_summary[7] + 1 % 0xFF;
+  // Serial.write(send_summary, BMS_COMMAND_LEN);
+  // delayMicroseconds(5000);
 }
 
 /**
@@ -342,11 +354,11 @@ void setup()
   digitalWrite(buzzer,LOW);
   delay(500);
 
-  digitalWrite(TRIGGER_IN, deassert);
+  deassertTrigger();
 
   // run the startup sequence
-  startupSeq();
-  //test10();
+  //startupSeq();
+  test10();
   //sound buzzer to know when it is done
   delay(3000);
   digitalWrite(buzzer, HIGH);
@@ -370,4 +382,5 @@ void loop()
   // delay(3000);
   //Serial.println("Hello People");
   //delay(2000);
+  deassertTrigger();
 }
