@@ -1,0 +1,2 @@
+# Ignore the following files
+bm_test_rpi/__pycache__/*
